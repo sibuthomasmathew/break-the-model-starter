@@ -31,6 +31,20 @@ Free Groq keys allow only a few requests per minute. If you see a rate-limit mes
 
 Prefer coding? See `example_attack.py`.
 
+## Automated attacker
+
+```bash
+python3 auto_attack.py                 # weakest model, stop at the first leak
+python3 auto_attack.py --all-models --keep-going --delay 5
+python3 auto_attack.py --only obfuscate --list     # preview attacks
+```
+Runs ~90 attacks (direct, authority claims, multi-turn escalation, piecewise extraction, and
+output-filter evasion such as base64/ROT13/reversed/spaced digits) and checks every reply with
+`detector.py`, which also decodes obfuscated answers. Results go to `results/report.md`
+(the `turn_id`s to submit) and `results/results.jsonl`. It backs off on rate limits.
+Add your own ideas in `attacks.py`. `mock_server.py` is a local fake API for testing changes.
+Mind your key's budget: use `--limit` / `--per-group` to cap requests.
+
 ## Rules
 
 - Attack only through messages. No hacking the server.
