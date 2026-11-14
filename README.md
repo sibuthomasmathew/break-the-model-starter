@@ -42,6 +42,9 @@ Runs ~90 attacks (direct, authority claims, multi-turn escalation, piecewise ext
 output-filter evasion such as base64/ROT13/reversed/spaced digits) and checks every reply with
 `detector.py`, which also decodes obfuscated answers. Results go to `results/report.md`
 (the `turn_id`s to submit) and `results/results.jsonl`. It backs off on rate limits.
+Providers: the key decides the provider (`sk-ant-` Anthropic, `gsk_` Groq, anything else Nebius).
+`python3 auto_attack.py --list-models` shows what your key can use; `--key NEBIUS_KEY --model 1,2`
+runs a different provider's key without touching `.env`; `--model` takes ids or list numbers.
 Add your own ideas in `attacks.py`. `mock_server.py` is a local fake API for testing changes.
 Mind your key's budget: use `--limit` / `--per-group` to cap requests.
 

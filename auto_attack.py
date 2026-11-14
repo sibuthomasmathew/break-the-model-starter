@@ -3,13 +3,24 @@
   python3 auto_attack.py                      # weakest model, all attacks, stop at first leak
   python3 auto_attack.py --model NAME         # specific model
   python3 auto_attack.py --all-models         # try every model for your key, weakest first
+  python3 auto_attack.py --list-models        # show models for your key (provider follows the key)
+  python3 auto_attack.py --key NEBIUS_KEY --model 1,2   # use another provider's key; models by number
   python3 auto_attack.py --keep-going --limit 40 --delay 4
   python3 auto_attack.py --list               # just print the attack list
 
 Results:  results/report.md (turn_ids to submit)  and  results/results.jsonl (everything)
 """
-import argparse, json, re, sys, time
+import argparse, json, os, re, sys, time
 from pathlib import Path
+
+# --key must be applied before btm is imported (btm reads the key and picks the provider from it)
+for _i, _a in enumerate(sys.argv):
+    if _a == "--key" and _i + 1 < len(sys.argv):
+        os.environ["API_KEY"] = sys.argv[_i + 1]
+        os.environ.pop("NEBIUS_API_KEY", None); os.environ["TEAM_CODE"] = ""
+    elif _a.startswith("--key="):
+        os.environ["API_KEY"] = _a.split("=", 1)[1]
+        os.environ.pop("NEBIUS_API_KEY", None); os.environ["TEAM_CODE"] = ""
 
 try:
     import btm
@@ -76,7 +87,10 @@ def write_report(results, path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model"); ap.add_argument("--all-models", action="store_true")
+    ap.add_argument("--model", help="model id, a list number from --list-models, or comma-separated several")
+    ap.add_argument("--all-models", action="store_true")
+    ap.add_argument("--key", help="use this API key instead of .env (sk-ant-=Anthropic, gsk_=Groq, else Nebius)")
+    ap.add_argument("--list-models", action="store_true", help="show models available for your key and exit")
     ap.add_argument("--keep-going", action="store_true", help="don't stop at first leak")
     ap.add_argument("--limit", type=int, help="max attacks per model")
     ap.add_argument("--per-group", type=int, help="cap templates x targets combos per group")
@@ -95,10 +109,23 @@ def main():
             print(f"{n:28} {len(m)} msg  {m[0][:80]}")
         return
 
-    avail = [m for m, _ in btm.list_models()]
+    listing = btm.list_models()
+    avail = [m for m, _ in listing]
+    if a.list_models:
+        print(f"Provider for this key: {btm.PROVIDER}")
+        for i, (m, tier) in enumerate(listing, 1):
+            print(f"  {i}. {m}  ({tier})")
+        return
     if not avail:
         sys.exit("No models available for your key.")
-    models = avail if a.all_models else [a.model or avail[0]]
+    if a.all_models:
+        models = avail
+    elif a.model:
+        models = [avail[int(x) - 1] if x.strip().isdigit() and 0 < int(x) <= len(avail) else x.strip()
+                  for x in a.model.split(",")]
+    else:
+        models = [avail[0]]
+    print(f"Provider: {btm.PROVIDER}")
     results, secrets = [], set()
     jl = (OUT / "results.jsonl").open("a")
     try:
