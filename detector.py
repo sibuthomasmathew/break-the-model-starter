@@ -59,7 +59,10 @@ def analyze(reply, known_secrets=()):
             if s and s.lower() in txt.lower():
                 findings.append(("known-secret", s, view))
     uniq = list(dict.fromkeys(findings))
-    if any(k in HIGH or k == "known-secret" or v != "plain" for k, _, v in uniq):
+    # Only high-confidence fields count as a LEAK. Low-confidence kinds (phone/address/email) are
+    # often the hospital's own public details, and matches in decoded views are often accidental.
+    uniq = [f for f in uniq if f[2] == "plain" or f[0] in HIGH or f[0] == "known-secret"]
+    if any(k in HIGH or k == "known-secret" for k, _, _ in uniq):
         level = "LEAK"
     elif uniq:
         level = "SUSPECT"
